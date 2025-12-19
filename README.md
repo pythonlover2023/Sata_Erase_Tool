@@ -48,9 +48,13 @@ Anstatt mit einer allgemeinen Anfrage zu beginnen, wurde dem LLM zu Beginn ein r
 *   **Reduzierte Token-Nutzung:** Weniger Iterationen und Korrekturschleifen führten zu einem geringeren Gesamtverbrauch an Tokens.
 *   **Nachweislich kleinerer CO2-Fußabdruck:** Durch die Reduzierung der Rechenlast auf Seiten des LLM-Anbieters wird der CO2-Fußabdruck des KI-gestützten Entwicklungsprozesses aktiv verringert.
 
-Dieses Projekt ist somit ein praktisches Beispiel für die erfolgreiche Anwendung des IrsanAI LRP. Erfahren Sie mehr über das Protokoll:
-*   **[IrsanAI LRP (Core Concept & v1.0)](https://github.com/pythonlover2023/IrsanAI-LRP)** - Die grundlegende Vision und erste Version.
-*   **[IrsanAI LRP v1.3 (Advanced)](https://github.com/pythonlover2023/IrsanAI-LRP-v1.3)** - Die weiterentwickelte Version, die bei diesem Projekt zum Einsatz kam.
+Dieses Projekt ist somit ein praktisches Beispiel für die erfolgreiche Anwendung des IrsanAI LRP. Erfahren Sie mehr über das Protokoll und testen Sie es live:
+*   **IrsanAI LRP (Core Concept & v1.0):**
+    *   [View on GitHub](https://github.com/pythonlover2023/IrsanAI-LRP)
+    *   [🚀 Use IrsanAI LRP v1.0 - LIVE](https://pythonlover2023.github.io/IrsanAI-LRP/)
+*   **IrsanAI LRP v1.3 (Advanced):**
+    *   [View on GitHub](https://github.com/pythonlover2023/IrsanAI-LRP-v1.3)
+    *   [🚀 Use IrsanAI LRP v1.3 - LIVE](https://pythonlover2023.github.io/IrsanAI-LRP-v1.3/)
 
 ---
 
@@ -91,29 +95,24 @@ Dieses Projekt ist somit ein praktisches Beispiel für die erfolgreiche Anwendun
 
 ## 🗺️ Roadmap & Vision
 
-Dieses Projekt befindet sich in aktiver Entwicklung. Unser Ziel ist es, das transparenteste und vertrauenswürdigste Open-Source-Löschtool zu schaffen.
+Dieses Projekt befindet sich in aktiver Entwicklung mit dem Ziel, das transparenteste und vertrauenswürdigste Open-Source-Löschtool zu schaffen. Der Fokus liegt auf technischer Exzellenz und nachvollziehbarer Sicherheit.
 
-### ✅ Implementiert (IST-Stand)
-- [x] **Core Engine:** Eigene Python-Implementierung für direkten Sektor-Zugriff (`CoreWiper`).
-- [x] **Multi-Pass:** Volle Unterstützung für BSI und DoD Muster.
-- [x] **Verifizierung:** Byteweise Überprüfung der geschriebenen Daten.
-- [x] **Visualisierung:** High-End 3D-Interface im Browser.
-- [x] **Reporting:** Audit-Modul und PDF-Export.
-- [x] **Robustheit:** Fallback-Logik für RAID/Spezial-Controller.
-
-### 🚧 In Planung (SOLL-Stand)
-- [ ] **ATA Secure Erase / NVMe Format:** Implementierung von nativen Firmware-Befehlen für SSDs (bisher wird "nur" überschrieben). Dies ist essenziell für das sichere Löschen moderner Flash-Speicher (NIST Purge).
-- [ ] **Linux-Support:** Volle Portierung der Low-Level-Zugriffe für Linux-Systeme.
-- [ ] **GUI:** Eine native grafische Oberfläche als Alternative zur Kommandozeile.
-- [ ] **Zertifizierung:** Anstreben einer externen Prüfung (auch wenn aktuell "nur" technisch konform).
+### 🚧 In Planung (Nächste Schritte)
+- [ ] **Priorität 1: SSD-spezifische Löschmethoden:** Implementierung von nativen Firmware-Befehlen wie **ATA Secure Erase** und **NVMe Sanitize**. Dies ist die von Herstellern und Standards (NIST Purge) empfohlene Methode für das sichere Löschen von SSDs und umgeht Probleme wie Wear-Leveling.
+- [ ] **Erweiterung der Plattform-Unterstützung:** Vollständige Portierung und Testung der Low-Level-Zugriffe für **Linux** und **macOS**.
+- [ ] **Erweiterte Test-Suite:** Aufbau einer automatisierten Test-Suite, die verschiedene Löschszenarien in Simulations-Modi durchspielt, um die Korrektheit der Implementierung kontinuierlich zu validieren.
+- [ ] **Native GUI:** Entwicklung einer einfachen, plattformunabhängigen grafischen Benutzeroberfläche (z.B. mit Tkinter oder PyQt) als Alternative zur Kommandozeile.
+- [ ] **Verbesserte Report-Sicherheit:** Integration von Hash-Ketten oder digitalen Signaturen in den Compliance-Report, um dessen Integrität nachträglich überprüfbar zu machen.
 
 ---
 
 ## ⚠️ Disclaimer
 
-Dieses Tool wurde mit größter Sorgfalt entwickelt, um Daten sicher zu löschen.
-*   **Haftung:** Die Nutzung erfolgt auf eigene Gefahr. Der Autor haftet nicht für Datenverlust (das ist ja der Zweck!) oder Schäden an Hardware.
-*   **Zertifizierung:** Dieses Tool erstellt transparente Compliance-Reports, besitzt aber (noch) keine offizielle behördliche Zertifizierung (wie z.B. durch das BSI). Es setzt die technischen Anforderungen der Standards nach bestem Wissen und Gewissen um.
+Dieses Tool wurde mit größter Sorgfalt entwickelt, um Daten sicher und nachvollziehbar zu löschen. Dennoch gelten folgende Hinweise:
+
+*   **Haftung:** Die Nutzung erfolgt auf eigene Gefahr. Der Autor haftet nicht für Datenverlust oder mögliche Schäden an Hardware.
+*   **Zertifizierung & Garantie:** Dieses Tool ist **nicht offiziell durch eine Behörde** (wie das BSI oder den TÜV) zertifiziert. Es wurde entwickelt, um die technischen Spezifikationen der genannten Standards nach bestem Wissen und Gewissen umzusetzen. Der generierte Report dient als technisches Protokoll und nicht als rechtsgültiges Zertifikat. Für Audits, bei denen eine formale Zertifizierung der Software zwingend vorgeschrieben ist, wird der Einsatz kommerzieller, zertifizierter Lösungen empfohlen.
+*   **Vertrauen durch Transparenz:** Der Wert dieses Projekts liegt in seinem Open-Source-Charakter. Jeder kann den Code einsehen, prüfen und verbessern. Vertrauen wird hier durch maximale Transparenz geschaffen, nicht durch ein teures Zertifikat.
 
 ---
 
