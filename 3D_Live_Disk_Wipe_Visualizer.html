@@ -52,13 +52,66 @@
     <div id="canvas-container">
         <canvas id="render-canvas"></canvas>
         <div class="hud">
-            <!-- UI Panels (unchanged) -->
-            <div class="stats-bar" id="stats-bar">...</div>
-            <div class="legend">...</div>
-            <div id="pip-container">...</div>
-            <div id="io-graph-container">...</div>
+            <!-- LEFT PANEL: Stats -->
+            <div class="stats-bar" id="stats-bar">
+                <div class="stat-item">
+                    <div class="stat-label"><span class="stat-icon">💾</span>DISK MODEL</div>
+                    <div class="stat-value" id="disk-model">-</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label"><span class="stat-icon">📦</span>CAPACITY</div>
+                    <div class="stat-value" id="disk-capacity">-</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label"><span class="stat-icon">🧹</span>SECTORS WIPED</div>
+                    <div class="stat-value" id="sectors-wiped">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label"><span class="stat-icon">⚡</span>LIVE SPEED</div>
+                    <div class="stat-value" id="wipe-speed">0 MB/s</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label"><span class="stat-icon">⏱️</span>TIME ELAPSED</div>
+                    <div class="stat-value" id="time-elapsed">00:00</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label"><span class="stat-icon">⏳</span>ETA</div>
+                    <div class="stat-value" id="eta">--:--</div>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar" id="progress-bar"></div>
+                    <div class="progress-text" id="progress-text">0.00%</div>
+                </div>
+            </div>
+
+            <!-- RIGHT SIDE -->
+            <div class="legend">
+                <div class="legend-title">📊 SECTOR STATUS</div>
+                <div class="legend-item"><div class="legend-color" style="background: #333;"></div><span>Pending (Untouched)</span></div>
+                <div class="legend-item"><div class="legend-color" style="background: #ff0;"></div><span>In Progress (Active)</span></div>
+                <div class="legend-item"><div class="legend-color" style="background: #f00;"></div><span>Wiping (Writing)</span></div>
+                <div class="legend-item"><div class="legend-color" style="background: #0f0;"></div><span>Complete (Verified)</span></div>
+            </div>
+            <div id="pip-container">
+                <div id="pip-label">🎥 HEAD-CAM [LIVE]</div>
+                <canvas id="pip-canvas"></canvas>
+            </div>
+            <div id="io-graph-container">
+                <div id="io-graph-label">📈 LIVE I/O (MB/s)</div>
+                <canvas id="io-graph" width="230" height="80"></canvas>
+            </div>
+
+            <!-- BOTTOM LEFT -->
             <div id="hex-dump"></div>
-            <div class="sector-panel" id="sector-panel" style="display: none;">...</div>
+            <div class="sector-panel" id="sector-panel" style="display: none;">
+                <div class="sector-title">🎯 CURRENT OPERATION</div>
+                <div class="sector-info" id="sector-info">
+                    <div>Sector: <span id="current-sector">-</span></div>
+                    <div>Track: <span id="current-track">-</span></div>
+                    <div>Pattern: <span id="wipe-pattern">-</span></div>
+                    <div id="operation-detail" style="margin-top: 5px; color: #ff0; font-weight: bold;">-</div>
+                </div>
+            </div>
             
             <!-- Controls & Hint -->
             <div class="controls">
@@ -95,51 +148,42 @@
         const speedHistory = new Array(60).fill(0);
         const hexDumpEl = document.getElementById('hex-dump');
 
-        // Raycasting for "Data Ghost" scan
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
         let ghostMaterial;
 
         function init() {
-            // Scene & Main Camera
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x000000);
             scene.fog = new THREE.FogExp2(0x000000, 0.03);
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(0, 5, 10);
 
-            // Main Renderer
             renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('render-canvas'), antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
 
-            // PiP Renderer & Camera
             const pipCanvas = document.getElementById('pip-canvas');
             pipRenderer = new THREE.WebGLRenderer({ canvas: pipCanvas, antialias: true });
             pipRenderer.setSize(pipCanvas.clientWidth, pipCanvas.clientHeight);
             pipCamera = new THREE.PerspectiveCamera(60, pipCanvas.clientWidth / pipCanvas.clientHeight, 0.1, 50);
             scene.add(pipCamera);
 
-            // Lighting
             scene.add(new THREE.AmbientLight(0x404040, 0.8));
             const dirLight = new THREE.DirectionalLight(0x00ff88, 0.8);
             dirLight.position.set(5, 10, 7);
             scene.add(dirLight);
 
-            // Create HDD Model
             createHDD();
 
-            // NEW: OrbitControls for Free Cam
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.1;
-            controls.enabled = false; // Initially disabled
+            controls.enabled = false;
 
-            // NEW: Ghost Material
             const noiseTexture = new THREE.CanvasTexture(generateNoiseCanvas());
             ghostMaterial = new THREE.MeshBasicMaterial({ map: noiseTexture, transparent: true, opacity: 0.8 });
 
-            // Event Listeners & Clock
             clock = new THREE.Clock();
             window.addEventListener('resize', onWindowResize);
             document.getElementById('btn-autofocus').addEventListener('click', () => setCameraMode(true));
@@ -147,23 +191,54 @@
             document.getElementById('btn-fullscreen').addEventListener('click', () => document.documentElement.requestFullscreen());
             window.addEventListener('click', onSectorClick);
 
-            setCameraMode(true); // Initial mode
+            setCameraMode(true);
             animate();
         }
         
         function createHDD() {
-            // ... (createHDD code is unchanged)
+            disk = new THREE.Group();
+            const platterMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.9, roughness: 0.2 });
+            const platter = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 0.1, 64), platterMat);
+            platter.rotation.x = Math.PI / 2;
+            disk.add(platter);
+
+            const rings = 15, sectorsPerRing = 48;
+            const sectorGeom = new THREE.BoxGeometry(0.1, 0.05, 0.1);
+            for (let r = 0; r < rings; r++) {
+                const radius = 0.8 + (r / rings) * 1.6;
+                for (let s = 0; s < sectorsPerRing; s++) {
+                    const angle = (s / sectorsPerRing) * Math.PI * 2;
+                    const sector = new THREE.Mesh(sectorGeom, new THREE.MeshBasicMaterial({ color: 0x333333 }));
+                    sector.position.set(Math.cos(angle) * radius, 0.06, Math.sin(angle) * radius);
+                    sector.userData.status = 'pending';
+                    sectorMeshes.push(sector);
+                    disk.add(sector);
+                }
+            }
+
+            const headGroup = new THREE.Group();
+            arm = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.1, 0.2), new THREE.MeshStandardMaterial({ color: 0xcccccc }));
+            arm.position.x = 1.25;
+            head = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.15, 0.2), new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xcc0000 }));
+            head.position.set(2.5, 0.05, 0);
+            headGroup.add(arm, head);
+            headGroup.position.set(-2.5, 0.1, 0);
+            disk.add(headGroup);
+
+            pipCamera.position.set(0, 0.3, 0);
+            pipCamera.rotation.x = -Math.PI / 2.5;
+            head.add(pipCamera);
+
+            scene.add(disk);
         }
         
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
 
-            // Animate disk based on live speed
             const rotationSpeed = isSimulating ? THREE.MathUtils.lerp(0.5, 5, Math.min(wipeSpeed / 150, 1)) : 0;
             if(disk) disk.rotation.y += delta * rotationSpeed;
 
-            // Animate head position
             if (isSimulating && arm) {
                 const progress = totalSectors > 0 ? wipedSectors / totalSectors : 0;
                 const armAngle = (progress * 15) % 1 > 0.5 ? 0.4 : -0.4;
@@ -173,16 +248,14 @@
                 head.position.x = armRadius * 2;
             }
 
-            // Camera Logic
             if (autoFocus && isSimulating) {
                 const focusPoint = head.getWorldPosition(new THREE.Vector3());
                 camera.position.lerp(new THREE.Vector3(focusPoint.x + 2, focusPoint.y + 2, focusPoint.z + 2), delta * 1);
                 camera.lookAt(focusPoint);
             } else {
-                controls.update(); // Update OrbitControls if not in auto-focus
+                controls.update();
             }
 
-            // Update immersion elements
             if (isSimulating) {
                 updateHexDump();
                 drawGraph();
@@ -191,8 +264,6 @@
             renderer.render(scene, camera);
             pipRenderer.render(scene, pipCamera);
         }
-
-        // --- NEW & UPDATED FUNCTIONS ---
 
         function setCameraMode(isAuto) {
             autoFocus = isAuto;
@@ -203,9 +274,8 @@
         }
 
         function onSectorClick(event) {
-            if (autoFocus || !isSimulating) return; // Only in Free Cam during wipe
+            if (autoFocus || !isSimulating) return;
 
-            // Calculate mouse position in normalized device coordinates
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
 
@@ -214,14 +284,9 @@
 
             if (intersects.length > 0) {
                 const sector = intersects[0].object;
-
-                // "Data Ghost" effect
                 const originalMaterial = sector.material;
                 sector.material = ghostMaterial;
-
-                setTimeout(() => {
-                    sector.material = originalMaterial; // Restore original material
-                }, 400); // Effect duration
+                setTimeout(() => { sector.material = originalMaterial; }, 400);
             }
         }
 
@@ -233,20 +298,130 @@
             const imageData = ctx.createImageData(64, 64);
             for (let i = 0; i < imageData.data.length; i += 4) {
                 const val = Math.random() * 255;
-                imageData.data[i] = 0;       // R
-                imageData.data[i + 1] = val; // G
-                imageData.data[i + 2] = 0;   // B
-                imageData.data[i + 3] = 255; // A
+                imageData.data[i] = 0; imageData.data[i + 1] = val; imageData.data[i + 2] = 0; imageData.data[i + 3] = 255;
             }
             ctx.putImageData(imageData, 0, 0);
             return canvas;
         }
 
-        function updateVisualsFromLiveData() { /* Unchanged */ }
-        function updateHexDump() { /* Unchanged */ }
-        function drawGraph() { /* Unchanged */ }
-        function fetchLiveData() { /* Unchanged */ }
-        function onWindowResize() { /* Unchanged */ }
+        function updateVisualsFromLiveData() {
+            const progress = totalSectors > 0 ? wipedSectors / totalSectors : 0;
+            const targetSectorIndex = Math.floor(progress * sectorMeshes.length);
+
+            for (let i = currentSectorIndex; i < targetSectorIndex && i < sectorMeshes.length; i++) {
+                const sector = sectorMeshes[i];
+                if (sector.userData.status === 'pending') {
+                    sector.userData.status = 'wiping';
+                    sector.material.color.setHex(0xff0000);
+                    setTimeout(() => { sector.userData.status = 'complete'; sector.material.color.setHex(0x00ff00); }, 300);
+                }
+            }
+            currentSectorIndex = targetSectorIndex;
+        }
+
+        function updateHexDump() {
+            let dump = '';
+            for (let i = 0; i < 12; i++) {
+                dump += (Math.random().toString(16).substring(2, 10) + ' ').toUpperCase() + '\n';
+            }
+            hexDumpEl.textContent = dump;
+        }
+
+        function drawGraph() {
+            speedHistory.push(wipeSpeed);
+            if (speedHistory.length > 60) speedHistory.shift();
+
+            const w = graphCanvas.width;
+            const h = graphCanvas.height;
+            graphCtx.clearRect(0, 0, w, h);
+
+            graphCtx.strokeStyle = 'rgba(0, 255, 0, 0.2)';
+            graphCtx.lineWidth = 1;
+            graphCtx.beginPath();
+            for (let y = 0; y < h; y += 20) { graphCtx.moveTo(0, y); graphCtx.lineTo(w, y); }
+            graphCtx.stroke();
+
+            const maxVal = Math.max(50, ...speedHistory) * 1.2;
+
+            graphCtx.beginPath();
+            graphCtx.strokeStyle = '#0f0';
+            graphCtx.lineWidth = 2;
+            graphCtx.shadowBlur = 5;
+            graphCtx.shadowColor = '#0f0';
+
+            for (let i = 0; i < speedHistory.length; i++) {
+                const x = (i / (speedHistory.length - 1)) * w;
+                const y = h - (speedHistory[i] / maxVal) * h;
+                if (i === 0) graphCtx.moveTo(x, y); else graphCtx.lineTo(x, y);
+            }
+            graphCtx.stroke();
+            graphCtx.shadowBlur = 0;
+
+            graphCtx.fillStyle = '#0f0';
+            graphCtx.font = '10px Courier New';
+            graphCtx.fillText(Math.round(maxVal) + ' MB/s', 5, 10);
+        }
+
+        let lastStatus = "";
+        function fetchLiveData() {
+            fetch('live_wipe_status.json?' + Date.now())
+                .then(response => response.json())
+                .then(data => {
+                    if (!data || !data.wipe) return;
+
+                    totalSectors = data.wipe.total_sectors || 1;
+                    wipedSectors = data.wipe.wiped_sectors;
+                    wipeSpeed = data.wipe.speed_mbps;
+
+                    if (document.getElementById('disk-model').textContent !== data.disk.model) {
+                        document.getElementById('disk-model').textContent = data.disk.model;
+                        document.getElementById('disk-capacity').textContent = data.disk.capacity_gb + ' GB';
+                    }
+
+                    if (data.current_operation) {
+                        document.getElementById('current-sector').textContent = data.current_operation.sector.toLocaleString();
+                        document.getElementById('current-track').textContent = data.current_operation.track;
+                        document.getElementById('wipe-pattern').textContent = data.current_operation.pattern;
+                        document.getElementById('operation-detail').textContent = data.current_operation.operation;
+                    }
+
+                    const elapsed = Math.round(data.wipe.elapsed_seconds);
+                    document.getElementById('time-elapsed').textContent = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`;
+
+                    const eta = Math.round(data.wipe.eta_seconds);
+                    document.getElementById('eta').textContent = (eta >= 0) ? `${String(Math.floor(eta / 60)).padStart(2, '0')}:${String(eta % 60).padStart(2, '0')}` : '--:--';
+
+                    const progress = totalSectors > 0 ? (wipedSectors / totalSectors) * 100 : 0;
+                    document.getElementById('progress-bar').style.width = progress + '%';
+                    document.getElementById('progress-text').textContent = progress.toFixed(2) + '%';
+                    document.getElementById('sectors-wiped').textContent = Math.floor(wipedSectors).toLocaleString();
+                    document.getElementById('wipe-speed').textContent = wipeSpeed.toFixed(1) + ' MB/s';
+
+                    updateVisualsFromLiveData();
+
+                    if (data.wipe.status === 'wiping' && lastStatus !== 'wiping') isSimulating = true;
+                    if (data.wipe.status === 'complete' || data.wipe.status === 'failed') {
+                        isSimulating = false;
+                        if (data.wipe.status === 'complete') {
+                            document.getElementById('progress-bar').style.width = '100%';
+                            document.getElementById('progress-text').textContent = '100.00%';
+                        }
+                    }
+                    lastStatus = data.wipe.status;
+                })
+                .catch(err => console.log('Live data fetch failed.'));
+        }
+
+        setInterval(fetchLiveData, 200);
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            const pipCanvas = document.getElementById('pip-canvas');
+            pipRenderer.setSize(pipCanvas.clientWidth, pipCanvas.clientHeight);
+            pipCamera.aspect = pipCanvas.clientWidth / pipCanvas.clientHeight;
+            pipCamera.updateProjectionMatrix();
+        }
 
         window.addEventListener('load', init);
     </script>
