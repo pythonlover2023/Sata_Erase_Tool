@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE
+.idea/
+.vscode/
+
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# Logs and Reports
+*.log
+Secure_Erase_Report_*.html
+Secure_Erase_Report_*.json
+live_wipe_status.json
+
+# OS specific
+.DS_Store
+Thumbs.db

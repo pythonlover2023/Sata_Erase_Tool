@@ -1,0 +1,5 @@
+# Core dependency for real-time I/O monitoring
+psutil
+
+# Optional, but recommended for HTML report generation
+# No dependencies needed for the core wipe functionality
