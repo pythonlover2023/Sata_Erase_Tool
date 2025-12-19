@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-IrsanAI SATA Secure Erase Tool v1.4 - Robust Fallback
+IrsanAI SATA Secure Erase Tool v1.5 - Smart Feedback
 MIT 3D LIVE VISUALISIERUNG!
 
 Neue Features:
-- Intelligenter Fallback: Erkennt inkompatible Hardware (z.B. verschlüsselte RAIDs) 
-  und wechselt automatisch zur robusten `diskpart`-Methode.
-- Echte Multi-Pass Löschung für Standard-Laufwerke.
-- Echter Fortschritt im Visualizer, keine Simulation.
+- Smart Feedback System: Realistische, zeitbasierte Simulation im `diskpart`-Fallback-Modus.
+- Verbesserte User Experience für spezielle Hardware (z.B. verschlüsselte RAIDs).
 """
 
 import sys
 from pathlib import Path
 import time
 from datetime import datetime
-import threading # WICHTIG: Für den diskpart-Fallback-Thread
+import threading
+import subprocess
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -41,7 +40,6 @@ class SecureEraserWith3D(SecureEraser):
         Führt den Löschvorgang durch. Versucht zuerst die standardkonforme CoreWiper-Methode.
         Bei einem IOError (z.B. bei verschlüsselten RAIDs) wird auf die `diskpart`-Methode zurückgegriffen.
         """
-        # Starte 3D-Visualizer
         if enable_3d:
             self.bridge = LiveWipeBridge(self.disk_info)
             self.bridge.start()
@@ -57,7 +55,6 @@ class SecureEraserWith3D(SecureEraser):
             self.bridge.set_status('wiping')
             self.bridge.update_operation(operation='Initializing Drive Interface...')
 
-        # Prüfe, ob CoreWiper-Zugriff möglich ist
         can_use_core_wiper = True
         try:
             with CoreWiper(self.disk_number) as test_wiper:
@@ -68,7 +65,6 @@ class SecureEraserWith3D(SecureEraser):
             self.log_event('fallback', "Wechsle zu robuster `diskpart` Methode (1-Pass Nullen).", 'warning')
             can_use_core_wiper = False
 
-        # Führe die passende Methode aus
         if can_use_core_wiper:
             success = self._erase_with_core_wiper()
         else:
@@ -135,23 +131,30 @@ class SecureEraserWith3D(SecureEraser):
             return False
 
     def _erase_with_diskpart(self) -> bool:
-        """Fallback-Löschen mit `diskpart clean all`."""
+        """Fallback-Löschen mit `diskpart clean all` und intelligenter Simulation."""
         self.log_event('method', "Verwende `diskpart` Fallback-Methode.", 'warning')
+        
+        # Annahme für die Simulation
+        assumed_speed_mbps = 80  # Konservative Annahme für USB/HDD
+        total_size_gb = self.disk_info.get('size_gb', 0)
+        total_size_bytes = total_size_gb * 1024 * 1024 * 1024
+        estimated_duration_sec = total_size_bytes / (assumed_speed_mbps * 1024 * 1024) if assumed_speed_mbps > 0 else 3600
+
         try:
             diskpart_script = f"select disk {self.disk_number}\nonline disk\nattributes disk clear readonly\nclean all\n"
             
-            # Da diskpart eine Blackbox ist, simulieren wir den Fortschritt für das UI
             process_complete = threading.Event()
             process_result = {'success': False, 'error': ''}
+            wipe_start_time = time.time()
 
             def run_diskpart():
                 try:
-                    # WICHTIG: import subprocess hier oder oben sicherstellen. Oben ist besser.
-                    import subprocess
-                    result = subprocess.run(['diskpart'], input=diskpart_script, capture_output=True, text=True, timeout=7200, encoding='cp850', errors='ignore')
+                    result = subprocess.run(['diskpart'], input=diskpart_script, capture_output=True, text=True, timeout=estimated_duration_sec * 1.5, encoding='cp850', errors='ignore')
                     process_result['success'] = (result.returncode == 0)
                     if not process_result['success']:
                         process_result['error'] = result.stdout or result.stderr
+                except subprocess.TimeoutExpired:
+                    process_result['error'] = "Diskpart-Timeout nach geschätzter Dauer überschritten."
                 except Exception as e:
                     process_result['error'] = str(e)
                 finally:
@@ -162,15 +165,20 @@ class SecureEraserWith3D(SecureEraser):
 
             if self.bridge:
                 total_sectors = self.bridge.status['wipe']['total_sectors']
-                while not process_complete.wait(timeout=0.5):
-                    # Simuliere Fortschritt, da wir keine echten Daten von diskpart bekommen
-                    current_progress = self.bridge.status['wipe']['progress_percent']
-                    if current_progress < 99.5:
-                        # Annahme: 0.1% Fortschritt pro Update-Zyklus
-                        new_progress = current_progress + 0.1
-                        wiped_sectors = int((new_progress / 100) * total_sectors)
-                        self.bridge.update_progress(wiped_sectors)
-                        self.bridge.update_operation(operation="Executing `diskpart clean all`...")
+                while not process_complete.wait(timeout=1.0): # Update jede Sekunde
+                    elapsed_time = time.time() - wipe_start_time
+                    
+                    # Zeitbasierter Fortschritt
+                    progress_percent = (elapsed_time / estimated_duration_sec) * 100
+                    if progress_percent >= 99.9:
+                        progress_percent = 99.9 # Nicht 100% erreichen, bevor der Prozess fertig ist
+                    
+                    wiped_sectors = int((progress_percent / 100) * total_sectors)
+                    self.bridge.update_progress(wiped_sectors)
+                    
+                    remaining_sec = max(0, estimated_duration_sec - elapsed_time)
+                    remaining_min = remaining_sec / 60
+                    self.bridge.update_operation(operation=f"Executing `diskpart` (Black-Box)... Estimated time remaining: ~{remaining_min:.0f} min")
 
             thread.join()
 
@@ -188,8 +196,8 @@ class SecureEraserWith3D(SecureEraser):
 def main_with_3d():
     """Hauptprogramm mit 3D-Visualisierung"""
     print("╔══════════════════════════════════════════════════════════╗")
-    print("║     IrsanAI SATA Secure Erase Tool v1.4                 ║")
-    print("║     Robust-Mode & Multi-Pass Engine                     ║")
+    print("║     IrsanAI SATA Secure Erase Tool v1.5                 ║")
+    print("║     Smart Feedback & Multi-Pass Engine                ║")
     print("╚══════════════════════════════════════════════════════════╝\n")
     
     AdminCheck.request_admin()

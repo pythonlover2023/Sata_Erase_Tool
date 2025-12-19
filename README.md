@@ -36,12 +36,30 @@ Generiert am Ende einen detaillierten HTML-Bericht:
 
 ---
 
+## 🧠 Genesis & Development Philosophy: Powered by IrsanAI LRP
+
+Dieses Projekt wurde nicht im luftleeren Raum entwickelt. Seine Entstehung wurde maßgeblich durch das **IrsanAI LRP (LLM Response Protocol)** beschleunigt und optimiert – ein Protokoll, das entwickelt wurde, um die Interaktion mit großen Sprachmodellen (LLMs) effizienter und zielgerichteter zu gestalten.
+
+**Der Prozess:**
+Anstatt mit einer allgemeinen Anfrage zu beginnen, wurde dem LLM zu Beginn ein reichhaltiger, voranalysierter Kontext über das Zielsystem zur Verfügung gestellt. Dies wurde durch das Skript `IrsanAI_OS_HW_Detector.py` (Teil dieses Repos) erreicht, das kritische Informationen über Betriebssystem, Hardware und verfügbare System-Tools sammelte.
+
+**Die Vorteile dieses Ansatzes:**
+*   **Höhere Effizienz:** Das LLM konnte von Anfang an präziseren und relevanteren Code generieren.
+*   **Reduzierte Token-Nutzung:** Weniger Iterationen und Korrekturschleifen führten zu einem geringeren Gesamtverbrauch an Tokens.
+*   **Nachweislich kleinerer CO2-Fußabdruck:** Durch die Reduzierung der Rechenlast auf Seiten des LLM-Anbieters wird der CO2-Fußabdruck des KI-gestützten Entwicklungsprozesses aktiv verringert.
+
+Dieses Projekt ist somit ein praktisches Beispiel für die erfolgreiche Anwendung des IrsanAI LRP. Erfahren Sie mehr über das Protokoll:
+*   **[IrsanAI LRP (Core Concept & v1.0)](https://github.com/pythonlover2023/IrsanAI-LRP)** - Die grundlegende Vision und erste Version.
+*   **[IrsanAI LRP v1.3 (Advanced)](https://github.com/pythonlover2023/IrsanAI-LRP-v1.3)** - Die weiterentwickelte Version, die bei diesem Projekt zum Einsatz kam.
+
+---
+
 ## 🛠️ Installation
 
 1.  **Repository klonen:**
     ```bash
-    git clone https://github.com/pythonlover2023/Sata_Erase.git
-    cd Sata_Erase
+    git clone https://github.com/pythonlover2023/Sata_Erase_Tool.git
+    cd Sata_Erase_Tool
     ```
 
 2.  **Abhängigkeiten installieren:**
